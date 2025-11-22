@@ -1,3 +1,15 @@
+---
+title: AI Image Analysis Platform
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: streamlit
+sdk_version: "1.28.0"
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # 🚀 AI Image Analysis Platform
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)

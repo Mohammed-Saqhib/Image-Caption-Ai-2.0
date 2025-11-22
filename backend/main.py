@@ -255,10 +255,13 @@ async def text_to_speech(request: TTSRequest):
         if result["success"]:
             audio_file = Path(result["audio_file"])
             
+            # Determine media type based on file extension
+            media_type = "audio/aiff" if audio_file.suffix == ".aiff" else "audio/wav"
+            
             return FileResponse(
                 path=str(audio_file),
-                media_type="audio/wav",
-                filename=f"speech_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav",
+                media_type=media_type,
+                filename=f"speech_{datetime.now().strftime('%Y%m%d_%H%M%S')}{audio_file.suffix}",
                 headers={
                     "X-Character-Count": str(len(request.text)),
                     "X-Language": request.language

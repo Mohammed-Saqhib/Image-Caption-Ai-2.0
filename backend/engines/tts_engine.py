@@ -6,6 +6,8 @@ import subprocess
 import platform
 from pathlib import Path
 import uuid
+import re
+from deep_translator import GoogleTranslator
 
 class TTSEngine:
     def __init__(self):
@@ -17,11 +19,83 @@ class TTSEngine:
         if self.system != "Darwin":  # Not macOS
             self.engine = pyttsx3.init()
         
+        # Language code mapping for translation
+        self.lang_codes = {
+            'hi': 'hi',     # Hindi
+            'bn': 'bn',     # Bengali
+            'ta': 'ta',     # Tamil
+            'te': 'te',     # Telugu
+            'kn': 'kn',     # Kannada
+            'ml': 'ml',     # Malayalam
+            'gu': 'gu',     # Gujarati
+            'mr': 'mr',     # Marathi
+            'pa': 'pa',     # Punjabi
+            'or': 'or',     # Odia
+            'as': 'as',     # Assamese
+            'ur': 'ur',     # Urdu
+            'ar': 'ar',     # Arabic
+            'es': 'es',     # Spanish
+            'fr': 'fr',     # French
+            'de': 'de',     # German
+            'it': 'it',     # Italian
+            'pt': 'pt',     # Portuguese
+            'ru': 'ru',     # Russian
+            'ja': 'ja',     # Japanese
+            'ko': 'ko',     # Korean
+            'zh': 'zh-CN',  # Chinese
+            'th': 'th',     # Thai
+            'tr': 'tr',     # Turkish
+            'nl': 'nl',     # Dutch
+            'sv': 'sv',     # Swedish
+            'id': 'id',     # Indonesian
+            'vi': 'vi',     # Vietnamese
+        }
+        
         print(f"🎧 TTS Engine initialized ({self.system})")
+    
+    def _is_english_text(self, text):
+        """Check if text is primarily English (Latin alphabet)"""
+        # Remove spaces and punctuation
+        clean_text = re.sub(r'[^\w]', '', text)
+        if not clean_text:
+            return True
+        
+        # Count Latin characters (English, European languages)
+        latin_chars = len(re.findall(r'[a-zA-Z]', clean_text))
+        total_chars = len(clean_text)
+        
+        # If more than 80% Latin characters, consider it English
+        return (latin_chars / total_chars) > 0.8 if total_chars > 0 else True
+    
+    def _translate_if_needed(self, text, language):
+        """Translate text to target language if it's in English"""
+        # Don't translate if already English or if language not supported
+        if language.lower() in ['en', 'en-us', 'en-gb', 'en-au']:
+            return text
+        
+        # Check if text is English
+        if not self._is_english_text(text):
+            print(f"  Text appears to be in target language already, no translation needed")
+            return text
+        
+        # Translate English to target language
+        target_lang = self.lang_codes.get(language.lower())
+        if not target_lang:
+            print(f"  Translation not supported for {language}, using original text")
+            return text
+        
+        try:
+            translator = GoogleTranslator(source='auto', target=target_lang)
+            translated = translator.translate(text)
+            print(f"  📝 Auto-translated: '{text[:50]}...' → '{translated[:50]}...' ({language})")
+            return translated
+        except Exception as e:
+            print(f"  ⚠ Translation failed: {e}, using original text")
+            return text
     
     def generate_speech(self, text, language="en", rate=200):
         """
-        Generate speech from text
+        Generate speech from text with auto-translation
         
         Args:
             text: Text to convert to speech
@@ -32,13 +106,19 @@ class TTSEngine:
             dict with audio file path
         """
         try:
-            # Generate unique filename
-            audio_file = self.output_dir / f"speech_{uuid.uuid4()}.wav"
+            # Auto-translate if needed (English → target language)
+            processed_text = self._translate_if_needed(text, language)
+            
+            # Generate unique filename with appropriate extension
+            if self.system == "Darwin":
+                audio_file = self.output_dir / f"speech_{uuid.uuid4()}.aiff"
+            else:
+                audio_file = self.output_dir / f"speech_{uuid.uuid4()}.wav"
             
             if self.system == "Darwin":  # macOS
-                return self._generate_macos(text, language, rate, audio_file)
+                return self._generate_macos(processed_text, language, rate, audio_file)
             else:
-                return self._generate_pyttsx3(text, rate, audio_file)
+                return self._generate_pyttsx3(processed_text, language, rate, audio_file)
                 
         except Exception as e:
             print(f"TTS Error: {str(e)}")
@@ -48,57 +128,250 @@ class TTSEngine:
             }
     
     def _generate_macos(self, text, language, rate, audio_file):
-        """Generate speech using macOS 'say' command"""
-        # Voice mapping for different languages
+        """Generate speech using macOS 'say' command with enhanced language support"""
+        # Enhanced voice mapping with better language-specific voices
         voice_map = {
-            "en": "Alex",
-            "hi": "Lekha",
-            "ar": "Majed",
-            "es": "Monica",
-            "fr": "Thomas",
-            "de": "Anna",
-            "ja": "Kyoko",
-            "ko": "Yuna",
-            "zh": "Ting-Ting"
+            # English variants
+            "en": "Alex",           # English (US) - Clear male voice
+            "en-us": "Alex",        # English (US)
+            "en-gb": "Daniel",      # English (UK)
+            "en-au": "Karen",       # English (Australia)
+            
+            # Indian languages
+            "hi": "Lekha",          # Hindi - Female voice (native)
+            "kn": "Soumya",         # Kannada - Female voice (native)
+            "bn": "Piya",           # Bengali - Female voice (native)
+            "ta": "Vani",           # Tamil - Female voice (native)
+            "te": "Geeta",          # Telugu - Female voice (native)
+            "ml": "Lekha",          # Malayalam - Using Hindi voice (no native voice)
+            "gu": "Lekha",          # Gujarati - Using Hindi voice (no native voice)
+            "mr": "Lekha",          # Marathi - Using Hindi voice (no native voice)
+            "pa": "Lekha",          # Punjabi - Using Hindi voice (no native voice)
+            "or": "Lekha",          # Odia - Using Hindi voice (no native voice)
+            "as": "Lekha",          # Assamese - Using Hindi voice (no native voice)
+            "ur": "Majed",          # Urdu - Using Arabic voice (similar script)
+            
+            # Middle Eastern
+            "ar": "Majed",          # Arabic - Male voice
+            
+            # European languages
+            "es": "Monica",         # Spanish - Female voice
+            "es-mx": "Paulina",     # Spanish (Mexico)
+            "fr": "Thomas",         # French - Male voice
+            "de": "Anna",           # German - Female voice
+            "it": "Alice",          # Italian - Female voice
+            "pt": "Luciana",        # Portuguese - Female voice
+            "ru": "Yuri",           # Russian - Male voice
+            "nl": "Xander",         # Dutch - Male voice
+            "sv": "Alva",           # Swedish - Female voice
+            "no": "Nora",           # Norwegian - Female voice
+            "da": "Sara",           # Danish - Female voice
+            "fi": "Satu",           # Finnish - Female voice
+            "pl": "Zosia",          # Polish - Female voice
+            "tr": "Yelda",          # Turkish - Female voice
+            
+            # Asian languages
+            "ja": "Kyoko",          # Japanese - Female voice
+            "ko": "Yuna",           # Korean - Female voice
+            "zh": "Tingting",       # Chinese (Mandarin) - Female voice
+            "zh-cn": "Tingting",    # Chinese (China)
+            "zh-tw": "Mei-Jia",     # Chinese (Taiwan)
+            "th": "Kanya",          # Thai - Female voice
+            "id": "Damayanti",      # Indonesian - Female voice
+            "vi": "Linh",           # Vietnamese - Female voice
         }
         
-        voice = voice_map.get(language, "Alex")
+        # Get the appropriate voice for the language
+        voice = voice_map.get(language.lower(), "Alex")
         
-        # Run say command
-        cmd = ["say", "-v", voice, "-r", str(rate), "-o", str(audio_file), text]
-        subprocess.run(cmd, check=True)
+        # Adjust rate based on language (some languages sound better at different rates)
+        adjusted_rate = rate
+        # Indian languages, Asian languages, and Arabic - slower for better clarity
+        if language.lower() in ["hi", "bn", "ta", "te", "kn", "ml", "gu", "mr", "pa", "or", "as", "ur", "ar", "ja", "ko", "zh", "th", "vi"]:
+            adjusted_rate = int(rate * 0.85)
+        
+        # Generate AIFF file first
+        temp_aiff = audio_file
+        
+        # Run say command to generate AIFF
+        cmd = [
+            "say", 
+            "-v", voice, 
+            "-r", str(adjusted_rate),
+            "-o", str(temp_aiff),
+            text
+        ]
+        
+        try:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            print(f"✓ Generated speech: {voice} ({language}) at rate {adjusted_rate}")
+        except subprocess.CalledProcessError as e:
+            print(f"✗ TTS generation failed: {e.stderr}")
+            # Try with default voice if language-specific voice fails
+            if voice != "Alex":
+                print(f"  Retrying with default voice (Alex)...")
+                cmd[2] = "Alex"
+                subprocess.run(cmd, check=True)
+        
+        # Convert AIFF to WAV using ffmpeg if available, otherwise return AIFF
+        wav_file = audio_file.with_suffix('.wav')
+        try:
+            convert_cmd = [
+                "ffmpeg", 
+                "-i", str(temp_aiff), 
+                "-acodec", "pcm_s16le",  # PCM 16-bit
+                "-ar", "44100",           # 44.1kHz sample rate
+                "-ac", "1",               # Mono channel
+                str(wav_file), 
+                "-y",
+                "-loglevel", "error"      # Suppress ffmpeg output
+            ]
+            result = subprocess.run(convert_cmd, capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                # Conversion successful, remove AIFF and use WAV
+                temp_aiff.unlink()
+                print(f"✓ Converted to WAV format")
+                return {
+                    "success": True,
+                    "audio_file": str(wav_file),
+                    "voice": voice,
+                    "language": language,
+                    "format": "wav",
+                    "rate": adjusted_rate
+                }
+        except (subprocess.SubprocessError, FileNotFoundError) as e:
+            # ffmpeg not available or conversion failed, use AIFF
+            print(f"⚠ FFmpeg conversion skipped: {str(e)}")
+            pass
         
         return {
             "success": True,
-            "audio_file": str(audio_file),
+            "audio_file": str(temp_aiff),
             "voice": voice,
-            "language": language
+            "language": language,
+            "format": "aiff",
+            "rate": adjusted_rate
         }
     
-    def _generate_pyttsx3(self, text, rate, audio_file):
-        """Generate speech using pyttsx3"""
+    def _generate_pyttsx3(self, text, language, rate, audio_file):
+        """Generate speech using pyttsx3 with language support"""
+        # Set properties for better quality
         self.engine.setProperty('rate', rate)
+        self.engine.setProperty('volume', 0.9)
+        
+        # Try to find a voice matching the language
+        voices = self.engine.getProperty('voices')
+        selected_voice = None
+        
+        # Language code mapping
+        lang_prefixes = {
+            # Indian languages
+            'hi': 'hindi',
+            'bn': 'bengali',
+            'ta': 'tamil',
+            'te': 'telugu',
+            'kn': 'kannada',
+            'ml': 'malayalam',
+            'gu': 'gujarati',
+            'mr': 'marathi',
+            'pa': 'punjabi',
+            'or': 'odia',
+            'as': 'assamese',
+            'ur': 'urdu',
+            # Other languages
+            'en': 'english',
+            'es': 'spanish',
+            'fr': 'french',
+            'de': 'german',
+            'ja': 'japanese',
+            'ko': 'korean',
+            'zh': 'chinese',
+            'ar': 'arabic',
+            'it': 'italian',
+            'pt': 'portuguese',
+            'ru': 'russian',
+            'tr': 'turkish',
+            'th': 'thai',
+            'id': 'indonesian',
+            'vi': 'vietnamese'
+        }
+        
+        # Try to find a matching voice
+        lang_name = lang_prefixes.get(language.lower().split('-')[0], 'english')
+        for voice in voices:
+            if lang_name.lower() in voice.name.lower():
+                selected_voice = voice.id
+                print(f"✓ Selected voice: {voice.name} for {language}")
+                break
+        
+        if selected_voice:
+            self.engine.setProperty('voice', selected_voice)
+        else:
+            print(f"⚠ No specific voice found for {language}, using default")
+        
+        # Adjust rate for Indian and Asian languages
+        adjusted_rate = rate
+        if language.lower() in ['hi', 'bn', 'ta', 'te', 'kn', 'ml', 'gu', 'mr', 'pa', 'or', 'as', 'ur', 'ar', 'ja', 'ko', 'zh', 'th', 'vi']:
+            adjusted_rate = int(rate * 0.85)
+            self.engine.setProperty('rate', adjusted_rate)
+        
+        # Generate speech
         self.engine.save_to_file(text, str(audio_file))
         self.engine.runAndWait()
         
         return {
             "success": True,
             "audio_file": str(audio_file),
-            "engine": "pyttsx3"
+            "engine": "pyttsx3",
+            "language": language,
+            "rate": adjusted_rate
         }
     
     def get_available_voices(self):
-        """Get list of available voices"""
+        """Get list of available voices with enhanced language support"""
         if self.system == "Darwin":
             return [
-                {"code": "en", "name": "English", "voice": "Alex"},
-                {"code": "hi", "name": "Hindi", "voice": "Lekha"},
-                {"code": "ar", "name": "Arabic", "voice": "Majed"},
-                {"code": "es", "name": "Spanish", "voice": "Monica"},
-                {"code": "fr", "name": "French", "voice": "Thomas"},
-                {"code": "de", "name": "German", "voice": "Anna"},
-                {"code": "ja", "name": "Japanese", "voice": "Kyoko"},
-                {"code": "ko", "name": "Korean", "voice": "Yuna"}
+                # English variants
+                {"code": "en", "name": "English (US)", "voice": "Alex", "gender": "male"},
+                {"code": "en-gb", "name": "English (UK)", "voice": "Daniel", "gender": "male"},
+                {"code": "en-au", "name": "English (Australia)", "voice": "Karen", "gender": "female"},
+                
+                # Indian languages
+                {"code": "hi", "name": "हिंदी Hindi", "voice": "Lekha", "gender": "female"},
+                {"code": "kn", "name": "ಕನ್ನಡ Kannada", "voice": "Soumya", "gender": "female"},
+                {"code": "bn", "name": "বাংলা Bengali", "voice": "Piya", "gender": "female"},
+                {"code": "ta", "name": "தமிழ் Tamil", "voice": "Vani", "gender": "female"},
+                {"code": "te", "name": "తెలుగు Telugu", "voice": "Geeta", "gender": "female"},
+                {"code": "ml", "name": "മലയാളം Malayalam", "voice": "Lekha", "gender": "female"},
+                {"code": "gu", "name": "ગુજરાતી Gujarati", "voice": "Lekha", "gender": "female"},
+                {"code": "mr", "name": "मराठी Marathi", "voice": "Lekha", "gender": "female"},
+                {"code": "pa", "name": "ਪੰਜਾਬੀ Punjabi", "voice": "Lekha", "gender": "female"},
+                {"code": "or", "name": "ଓଡ଼ିଆ Odia", "voice": "Lekha", "gender": "female"},
+                {"code": "as", "name": "অসমীয়া Assamese", "voice": "Lekha", "gender": "female"},
+                {"code": "ur", "name": "اردو Urdu", "voice": "Majed", "gender": "male"},
+                
+                # Middle Eastern
+                {"code": "ar", "name": "العربية Arabic", "voice": "Majed", "gender": "male"},
+                
+                # European languages
+                {"code": "es", "name": "Español (Spain)", "voice": "Monica", "gender": "female"},
+                {"code": "es-mx", "name": "Español (Mexico)", "voice": "Paulina", "gender": "female"},
+                {"code": "fr", "name": "Français French", "voice": "Thomas", "gender": "male"},
+                {"code": "de", "name": "Deutsch German", "voice": "Anna", "gender": "female"},
+                {"code": "it", "name": "Italiano Italian", "voice": "Alice", "gender": "female"},
+                {"code": "pt", "name": "Português Portuguese", "voice": "Luciana", "gender": "female"},
+                {"code": "ru", "name": "Русский Russian", "voice": "Yuri", "gender": "male"},
+                {"code": "nl", "name": "Nederlands Dutch", "voice": "Xander", "gender": "male"},
+                {"code": "sv", "name": "Svenska Swedish", "voice": "Alva", "gender": "female"},
+                {"code": "tr", "name": "Türkçe Turkish", "voice": "Yelda", "gender": "female"},
+                
+                # Asian languages
+                {"code": "ja", "name": "日本語 Japanese", "voice": "Kyoko", "gender": "female"},
+                {"code": "ko", "name": "한국어 Korean", "voice": "Yuna", "gender": "female"},
+                {"code": "zh", "name": "中文 Chinese (Mandarin)", "voice": "Tingting", "gender": "female"},
+                {"code": "th", "name": "ไทย Thai", "voice": "Kanya", "gender": "female"},
+                {"code": "id", "name": "Bahasa Indonesia", "voice": "Damayanti", "gender": "female"},
+                {"code": "vi", "name": "Tiếng Việt Vietnamese", "voice": "Linh", "gender": "female"}
             ]
         else:
             voices = self.engine.getProperty('voices')

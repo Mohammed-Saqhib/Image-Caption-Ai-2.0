@@ -4,7 +4,7 @@
 import axios from 'axios';
 
 // API Base URL - Change this to your Hugging Face Space URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:7860';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -56,17 +56,28 @@ export const translateText = async (text, targetLanguage) => {
  * Text-to-Speech - Convert text to speech
  */
 export const textToSpeech = async (text, language = 'en', rate = 200) => {
-  const response = await api.post('/api/tts', {
-    text,
-    language,
-    rate,
-  }, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    responseType: 'blob',
-  });
-  return response.data;
+  try {
+    console.log('TTS Request:', { text: text.substring(0, 50), language, rate });
+    const response = await api.post('/api/tts', {
+      text,
+      language,
+      rate,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      responseType: 'blob',
+    });
+    console.log('TTS Response:', response.status, response.headers['content-type'], 'size:', response.data.size);
+    return response.data;
+  } catch (error) {
+    console.error('TTS API Error:', {
+      message: error.message,
+      response: error.response?.status,
+      data: error.response?.data
+    });
+    throw error;
+  }
 };
 
 /**
@@ -101,7 +112,7 @@ export const healthCheck = async () => {
   return response.data;
 };
 
-export default {
+const apiExports = {
   extractText,
   generateCaption,
   translateText,
@@ -109,5 +120,7 @@ export default {
   getOCRLanguages,
   getTranslationLanguages,
   getAvailableVoices,
-  healthCheck,
+  healthCheck
 };
+
+export default apiExports;

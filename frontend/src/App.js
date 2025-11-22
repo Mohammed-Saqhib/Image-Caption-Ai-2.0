@@ -11,10 +11,13 @@ import TranslationPanel from './components/TranslationPanel';
 import TTSPanel from './components/TTSPanel';
 import Header from './components/Header';
 import TabNavigation from './components/TabNavigation';
+import Login from './components/Login';
 
 import * as api from './services/api';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('ocr');
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -25,10 +28,38 @@ function App() {
   const [captionResult, setCaptionResult] = useState(null);
   const [translationResult, setTranslationResult] = useState(null);
   
-  // Health check on mount
+  // Check if user is already logged in
   useEffect(() => {
-    checkHealth();
+    const savedUser = localStorage.getItem('aiplatform_currentUser');
+    if (savedUser) {
+      setCurrentUser(savedUser);
+      setIsAuthenticated(true);
+    }
   }, []);
+  
+  // Health check on mount (only when authenticated)
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkHealth();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = (username) => {
+    setCurrentUser(username);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('aiplatform_currentUser');
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setUploadedImage(null);
+    setImagePreview(null);
+    setOcrResult(null);
+    setCaptionResult(null);
+    setTranslationResult(null);
+    toast.info('👋 Logged out successfully!');
+  };
 
   const checkHealth = async () => {
     try {
@@ -125,22 +156,18 @@ function App() {
   const handleTTS = async (text, language, rate) => {
     if (!text) {
       toast.warn('Please enter text for speech!');
-      return;
+      return null;
     }
 
     setLoading(true);
     try {
       const audioBlob = await api.textToSpeech(text, language, rate);
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Play audio
-      const audio = new Audio(audioUrl);
-      audio.play();
-      
-      toast.success('🎧 Playing audio...');
+      toast.success('🎧 Audio generated successfully!');
+      return audioBlob;
     } catch (error) {
       console.error('TTS Error:', error);
       toast.error('❌ Failed to generate speech. Try again.');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -148,63 +175,116 @@ function App() {
 
   return (
     <div className="App">
-      <Header />
-      
-      <motion.div
-        className="container"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <ImageUpload
-          onUpload={handleImageUpload}
-          imagePreview={imagePreview}
-          loading={loading}
-        />
+      {!isAuthenticated ? (
+        <Login onLogin={handleLogin} />
+      ) : (
+        <>
+          <Header user={currentUser} onLogout={handleLogout} />
+          
+          <div className="container">
+            <motion.div
+              className="main-content"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              {/* Left Column - Sticky Sidebar */}
+              <div className="left-column">
+                <ImageUpload
+                  onUpload={handleImageUpload}
+                  imagePreview={imagePreview}
+                  loading={loading}
+                />
+                
+                <TabNavigation
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                />
+              </div>
 
-        <TabNavigation
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+              {/* Right Column - Content Panels */}
+              <div className="right-column">
+                {/* Image Preview Section - Always Visible when image uploaded */}
+                {imagePreview && (
+                  <motion.div
+                    className="uploaded-image-section"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <div className="uploaded-image-header">
+                      <h3>📸 Uploaded Image</h3>
+                      <button 
+                        className="change-image-btn"
+                        onClick={() => {
+                          setUploadedImage(null);
+                          setImagePreview(null);
+                          setOcrResult(null);
+                          setCaptionResult(null);
+                          setTranslationResult(null);
+                        }}
+                      >
+                        Change Image
+                      </button>
+                    </div>
+                    <div className="uploaded-image-display">
+                      <img src={imagePreview} alt="Uploaded" className="main-image-preview" />
+                      <div className="image-overlay">
+                        <div className="image-details">
+                          <span className="detail-badge">
+                            ✓ Ready for Processing
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
-        <div className="content-panels">
-          {activeTab === 'ocr' && (
-            <OCRPanel
-              onProcess={handleOCR}
-              result={ocrResult}
-              loading={loading}
-            />
-          )}
+                {/* Processing Panels */}
+                <div className="processing-section">
+                  {activeTab === 'ocr' && (
+                    <OCRPanel
+                      onProcess={handleOCR}
+                      result={ocrResult}
+                      loading={loading}
+                      hasImage={!!uploadedImage}
+                    />
+                  )}
 
-          {activeTab === 'caption' && (
-            <CaptionPanel
-              onProcess={handleCaption}
-              result={captionResult}
-              loading={loading}
-            />
-          )}
+                  {activeTab === 'caption' && (
+                    <CaptionPanel
+                      onProcess={handleCaption}
+                      result={captionResult}
+                      loading={loading}
+                      hasImage={!!uploadedImage}
+                    />
+                  )}
 
-          {activeTab === 'translation' && (
-            <TranslationPanel
-              onTranslate={handleTranslate}
-              result={translationResult}
-              loading={loading}
-              ocrText={ocrResult?.data?.text}
-              captionText={captionResult?.data?.caption}
-            />
-          )}
+                  {activeTab === 'translation' && (
+                    <TranslationPanel
+                      onTranslate={handleTranslate}
+                      result={translationResult}
+                      loading={loading}
+                      ocrText={ocrResult?.data?.text}
+                      captionText={captionResult?.data?.caption}
+                    />
+                  )}
 
-          {activeTab === 'tts' && (
-            <TTSPanel
-              onGenerate={handleTTS}
-              loading={loading}
-              ocrText={ocrResult?.data?.text}
-              captionText={captionResult?.data?.caption}
-              translatedText={translationResult?.data?.translated_text}
-            />
-          )}
-        </div>
-      </motion.div>
+                  {activeTab === 'tts' && (
+                    <TTSPanel
+                      onGenerate={handleTTS}
+                      loading={loading}
+                      ocrText={ocrResult?.data?.text}
+                      captionText={captionResult?.data?.caption}
+                      translatedText={translationResult?.data?.translated_text}
+                    />
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
 
       <ToastContainer
         position="bottom-right"

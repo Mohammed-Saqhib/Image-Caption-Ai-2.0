@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaRocket, FaGithub, FaLinkedin } from 'react-icons/fa';
+import { FaRocket, FaSignOutAlt, FaUser } from 'react-icons/fa';
 import './Header.css';
 
-const Header = () => {
+const Header = ({ user, onLogout }) => {
   return (
     <motion.header
       className="header"
@@ -17,24 +17,22 @@ const Header = () => {
           <h1>AI Image Analysis Platform</h1>
         </div>
         
-        <div className="header-links">
-          <a
-            href="https://github.com/Mohammed-Saqhib/Image-Caption-Ai-2.0"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="header-link"
-          >
-            <FaGithub /> GitHub
-          </a>
-          <a
-            href="https://linkedin.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="header-link"
-          >
-            <FaLinkedin /> LinkedIn
-          </a>
-        </div>
+        {user && (
+          <div className="user-section">
+            <div className="user-info">
+              <FaUser className="user-icon" />
+              <span className="username">{user}</span>
+            </div>
+            <motion.button
+              className="logout-btn"
+              onClick={onLogout}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FaSignOutAlt /> Logout
+            </motion.button>
+          </div>
+        )}
       </div>
       
       <div className="header-subtitle">

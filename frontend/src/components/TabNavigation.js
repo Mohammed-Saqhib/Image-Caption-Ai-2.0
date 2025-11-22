@@ -4,10 +4,10 @@ import { FaEye, FaImage, FaLanguage, FaVolumeUp } from 'react-icons/fa';
 import './TabNavigation.css';
 
 const tabs = [
-  { id: 'ocr', name: 'OCR', icon: FaEye, desc: 'Extract Text' },
-  { id: 'caption', name: 'AI Caption', icon: FaImage, desc: 'Generate Description' },
-  { id: 'translation', name: 'Translate', icon: FaLanguage, desc: 'Multi-Language' },
-  { id: 'tts', name: 'Speech', icon: FaVolumeUp, desc: 'Text-to-Speech' }
+  { id: 'ocr', name: 'OCR Analysis', icon: FaEye, desc: 'Extract Text' },
+  { id: 'caption', name: 'AI Captioning', icon: FaImage, desc: 'Generate Description' },
+  { id: 'translation', name: 'Translation', icon: FaLanguage, desc: 'Multi-Language' },
+  { id: 'tts', name: 'Text-to-Speech', icon: FaVolumeUp, desc: 'Audio Output' }
 ];
 
 const TabNavigation = ({ activeTab, setActiveTab }) => {

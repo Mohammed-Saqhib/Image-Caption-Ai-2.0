@@ -169,13 +169,15 @@ async def extract_text(
 @app.post("/api/caption", tags=["AI Captioning"])
 async def generate_caption(
     file: UploadFile = File(...),
-    mode: str = Form("cloud")
+    mode: str = Form("cloud"),
+    detailed: bool = Form(True)
 ):
     """
-    Generate AI caption for image using BLIP model
+    Generate AI caption for image using BLIP model with detailed description
     
     - **file**: Image file (JPG, PNG, etc.)
     - **mode**: 'local' or 'cloud' (default: cloud for faster processing)
+    - **detailed**: Generate detailed description (default: True)
     """
     file_path = None
     try:
@@ -186,16 +188,18 @@ async def generate_caption(
         # Save uploaded file
         file_path = save_upload_file(file)
         
-        # Generate caption
-        result = caption_engine.generate_caption(str(file_path), mode=mode)
+        # Generate caption with detailed description
+        result = caption_engine.generate_caption(str(file_path), mode=mode, detailed=detailed)
         
         return JSONResponse(content={
             "success": True,
             "data": {
                 "caption": result["caption"],
+                "detailed_description": result.get("detailed_description", result["caption"]),
                 "mode": mode,
                 "confidence": result.get("confidence", 0.90),
-                "model": "Salesforce/blip-image-captioning-base"
+                "model": "Salesforce/blip-image-captioning-base",
+                "has_detailed": detailed
             },
             "timestamp": datetime.now().isoformat()
         })

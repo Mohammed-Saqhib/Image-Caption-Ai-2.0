@@ -328,54 +328,46 @@ class TTSEngine:
         }
     
     def get_available_voices(self):
-        """Get list of available voices with enhanced language support"""
+        """Get list of high-quality voices - Focus on English, Hindi, and Kannada"""
         if self.system == "Darwin":
             return [
-                # English variants
-                {"code": "en", "name": "English (US)", "voice": "Alex", "gender": "male"},
-                {"code": "en-gb", "name": "English (UK)", "voice": "Daniel", "gender": "male"},
-                {"code": "en-au", "name": "English (Australia)", "voice": "Karen", "gender": "female"},
+                # English variants - Premium quality
+                {"code": "en", "name": "English (US) - Premium", "voice": "Alex", "gender": "male", "quality": "premium"},
+                {"code": "en-gb", "name": "English (UK) - Premium", "voice": "Daniel", "gender": "male", "quality": "premium"},
+                {"code": "en-au", "name": "English (Australia)", "voice": "Karen", "gender": "female", "quality": "high"},
                 
-                # Indian languages
-                {"code": "hi", "name": "हिंदी Hindi", "voice": "Lekha", "gender": "female"},
-                {"code": "kn", "name": "ಕನ್ನಡ Kannada", "voice": "Soumya", "gender": "female"},
-                {"code": "bn", "name": "বাংলা Bengali", "voice": "Piya", "gender": "female"},
-                {"code": "ta", "name": "தமிழ் Tamil", "voice": "Vani", "gender": "female"},
-                {"code": "te", "name": "తెలుగు Telugu", "voice": "Geeta", "gender": "female"},
-                {"code": "ml", "name": "മലയാളം Malayalam", "voice": "Lekha", "gender": "female"},
-                {"code": "gu", "name": "ગુજરાતી Gujarati", "voice": "Lekha", "gender": "female"},
-                {"code": "mr", "name": "मराठी Marathi", "voice": "Lekha", "gender": "female"},
-                {"code": "pa", "name": "ਪੰਜਾਬੀ Punjabi", "voice": "Lekha", "gender": "female"},
-                {"code": "or", "name": "ଓଡ଼ିଆ Odia", "voice": "Lekha", "gender": "female"},
-                {"code": "as", "name": "অসমীয়া Assamese", "voice": "Lekha", "gender": "female"},
-                {"code": "ur", "name": "اردو Urdu", "voice": "Majed", "gender": "male"},
+                # Hindi - Premium quality native voice
+                {"code": "hi", "name": "हिंदी Hindi - Premium", "voice": "Lekha", "gender": "female", "quality": "premium"},
                 
-                # Middle Eastern
-                {"code": "ar", "name": "العربية Arabic", "voice": "Majed", "gender": "male"},
-                
-                # European languages
-                {"code": "es", "name": "Español (Spain)", "voice": "Monica", "gender": "female"},
-                {"code": "es-mx", "name": "Español (Mexico)", "voice": "Paulina", "gender": "female"},
-                {"code": "fr", "name": "Français French", "voice": "Thomas", "gender": "male"},
-                {"code": "de", "name": "Deutsch German", "voice": "Anna", "gender": "female"},
-                {"code": "it", "name": "Italiano Italian", "voice": "Alice", "gender": "female"},
-                {"code": "pt", "name": "Português Portuguese", "voice": "Luciana", "gender": "female"},
-                {"code": "ru", "name": "Русский Russian", "voice": "Yuri", "gender": "male"},
-                {"code": "nl", "name": "Nederlands Dutch", "voice": "Xander", "gender": "male"},
-                {"code": "sv", "name": "Svenska Swedish", "voice": "Alva", "gender": "female"},
-                {"code": "tr", "name": "Türkçe Turkish", "voice": "Yelda", "gender": "female"},
-                
-                # Asian languages
-                {"code": "ja", "name": "日本語 Japanese", "voice": "Kyoko", "gender": "female"},
-                {"code": "ko", "name": "한국어 Korean", "voice": "Yuna", "gender": "female"},
-                {"code": "zh", "name": "中文 Chinese (Mandarin)", "voice": "Tingting", "gender": "female"},
-                {"code": "th", "name": "ไทย Thai", "voice": "Kanya", "gender": "female"},
-                {"code": "id", "name": "Bahasa Indonesia", "voice": "Damayanti", "gender": "female"},
-                {"code": "vi", "name": "Tiếng Việt Vietnamese", "voice": "Linh", "gender": "female"}
+                # Kannada - Premium quality native voice
+                {"code": "kn", "name": "ಕನ್ನಡ Kannada - Premium", "voice": "Soumya", "gender": "female", "quality": "premium"},
             ]
         else:
+            # For non-macOS, filter to show only English, Hindi, Kannada
             voices = self.engine.getProperty('voices')
-            return [
-                {"id": i, "name": voice.name, "lang": voice.languages}
-                for i, voice in enumerate(voices)
-            ]
+            filtered_voices = []
+            
+            # Priority languages
+            priority_langs = ['english', 'hindi', 'kannada']
+            
+            for voice in voices:
+                voice_name_lower = voice.name.lower()
+                for lang in priority_langs:
+                    if lang in voice_name_lower:
+                        filtered_voices.append({
+                            "code": lang[:2],
+                            "name": voice.name,
+                            "id": voice.id,
+                            "quality": "high"
+                        })
+                        break
+            
+            # If no specific voices found, return first 3 voices
+            if not filtered_voices:
+                filtered_voices = [
+                    {"code": "en", "name": voices[i].name if i < len(voices) else "Default", 
+                     "id": voices[i].id if i < len(voices) else 0, "quality": "standard"}
+                    for i in range(min(3, len(voices)))
+                ]
+            
+            return filtered_voices

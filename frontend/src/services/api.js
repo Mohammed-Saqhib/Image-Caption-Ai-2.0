@@ -54,6 +54,7 @@ export const generateCaption = async (file, mode = 'cloud') => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('mode', mode);
+  formData.append('detailed', 'true'); // Always request detailed description
 
   const response = await api.post('/api/caption', formData);
   return response.data;

@@ -152,7 +152,19 @@ const CaptionPanel = ({ onProcess, result, loading, hasImage }) => {
 
             <div className="caption-display">
               <div className="caption-icon">💬</div>
-              <p className="caption-text">{result.data.caption}</p>
+              <div className="caption-content">
+                <div className="caption-section">
+                  <h4>Quick Caption</h4>
+                  <p className="caption-text">{result.data.caption}</p>
+                </div>
+                
+                {result.data.detailed_description && result.data.detailed_description !== result.data.caption && (
+                  <div className="caption-section detailed">
+                    <h4>📝 Detailed Description</h4>
+                    <p className="detailed-text">{result.data.detailed_description}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

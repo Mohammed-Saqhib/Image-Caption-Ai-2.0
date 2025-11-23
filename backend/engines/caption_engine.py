@@ -75,12 +75,17 @@ class CaptionEngine:
             }
     
     def _generate_local(self, image, detailed=True):
-        """Generate caption using local model with detailed description"""
+        """Generate caption using local model with enhanced detailed description"""
         self.load_model()
         
-        # Generate basic caption
+        # Generate basic caption with better parameters
         inputs = self.processor(image, return_tensors="pt").to(self.device)
-        outputs = self.model.generate(**inputs, max_length=50)
+        outputs = self.model.generate(
+            **inputs,
+            max_length=50,
+            num_beams=5,
+            early_stopping=True
+        )
         caption = self.processor.decode(outputs[0], skip_special_tokens=True)
         
         detailed_description = caption
@@ -89,17 +94,26 @@ class CaptionEngine:
             # Try to generate detailed description
             try:
                 if self.detailed_model == "fallback" or self.detailed_model is None:
-                    # Use BLIP-1 with specific prompts for detailed description
+                    # Use BLIP-1 with enhanced prompts for detailed description
                     prompts = [
-                        "Describe this image in detail:",
+                        "Describe the scene in this image:",
+                        "What objects and people can you see in this image?",
                         "What is happening in this image?",
-                        "Describe the scene, people, objects, and background:"
+                        "Describe the background and setting of this image:",
+                        "What colors and lighting are in this image?"
                     ]
                     
                     descriptions = []
                     for prompt in prompts:
                         inputs = self.processor(image, text=prompt, return_tensors="pt").to(self.device)
-                        outputs = self.model.generate(**inputs, max_length=100, num_beams=5)
+                        outputs = self.model.generate(
+                            **inputs,
+                            max_length=100,
+                            num_beams=5,
+                            temperature=0.8,
+                            do_sample=False,
+                            early_stopping=True
+                        )
                         desc = self.processor.decode(outputs[0], skip_special_tokens=True)
                         # Remove the prompt from the output
                         desc = desc.replace(prompt, "").strip()
@@ -109,23 +123,32 @@ class CaptionEngine:
                     # Combine descriptions intelligently
                     if descriptions:
                         detailed_description = self._combine_descriptions(descriptions, caption)
+                    else:
+                        detailed_description = self._enhance_caption(caption)
                 else:
                     # Use BLIP-2 for better detailed descriptions
                     self.load_detailed_model()
-                    prompt = "Describe this image in detail. What objects, people, actions, and background elements can you see?"
+                    prompt = "Question: Describe this image in detail. What objects, people, actions, colors, and background elements can you see? Answer:"
                     inputs = self.detailed_processor(image, text=prompt, return_tensors="pt").to(self.device)
                     
                     outputs = self.detailed_model.generate(
                         **inputs,
-                        max_length=150,
+                        max_length=200,
+                        min_length=50,
                         num_beams=5,
                         temperature=0.7,
-                        do_sample=True
+                        do_sample=True,
+                        top_p=0.9,
+                        repetition_penalty=1.2
                     )
                     detailed_description = self.detailed_processor.decode(outputs[0], skip_special_tokens=True)
+                    # Clean up the output
+                    detailed_description = detailed_description.replace(prompt, "").strip()
+                    if not detailed_description or len(detailed_description) < 20:
+                        detailed_description = self._enhance_caption(caption)
                     
             except Exception as e:
-                print(f"Detailed description generation failed: {e}, using basic caption")
+                print(f"Detailed description generation failed: {e}, using enhanced caption")
                 detailed_description = self._enhance_caption(caption)
         
         return {
@@ -196,52 +219,196 @@ class CaptionEngine:
         }
     
     def _enhance_caption(self, caption):
-        """Enhance a basic caption with more context"""
-        # Add contextual enhancements
-        enhanced = f"The image shows {caption}."
+        """Enhance a basic caption with more context and details"""
+        # Start with a natural opening
+        enhanced = f"This image shows {caption}."
         
-        # Add common scene elements based on caption keywords
-        keywords_context = {
-            "person": " The person appears to be the main subject of the image.",
-            "people": " Multiple people are visible in the scene.",
-            "man": " A man is present in the scene.",
-            "woman": " A woman is present in the scene.",
-            "child": " A child can be seen in the image.",
-            "dog": " A dog is visible in the photograph.",
-            "cat": " A cat can be seen in the image.",
-            "beach": " The setting appears to be at a beach.",
-            "mountain": " Mountains can be seen in the background.",
-            "building": " A building is visible in the scene.",
-            "car": " A car is present in the image.",
-            "food": " Food items are displayed in the image.",
-            "outdoor": " This appears to be an outdoor scene.",
-            "indoor": " This appears to be an indoor scene.",
+        # Add contextual enhancements based on caption keywords
+        caption_lower = caption.lower()
+        
+        # Subject-based enhancements
+        subject_context = {
+            "person": " A person is the main subject, captured in what appears to be a candid or posed photograph.",
+            "people": " Multiple people are visible, suggesting a social gathering or group activity.",
+            "man": " A man is prominently featured in the scene.",
+            "woman": " A woman is the central figure in this image.",
+            "child": " A child can be seen, adding a youthful element to the composition.",
+            "children": " Children are present, bringing energy and life to the scene.",
+            "baby": " A baby is visible, creating a tender moment.",
         }
         
-        caption_lower = caption.lower()
-        for keyword, context in keywords_context.items():
-            if keyword in caption_lower:
+        # Object-based enhancements
+        object_context = {
+            "dog": " A dog is present, likely a pet or companion animal.",
+            "cat": " A cat can be seen, adding a feline presence to the image.",
+            "bird": " A bird appears in the frame, possibly in flight or perched.",
+            "car": " A car is visible, suggesting transportation or urban context.",
+            "bicycle": " A bicycle is present, indicating cycling or outdoor activity.",
+            "food": " Food items are displayed, possibly in a dining or culinary context.",
+            "book": " A book is visible, suggesting reading or educational content.",
+            "phone": " A phone appears, indicating modern communication or technology.",
+            "computer": " A computer is present, suggesting work or digital activity.",
+        }
+        
+        # Location-based enhancements
+        location_context = {
+            "beach": " The setting appears to be at a beach, with sand and possibly water visible.",
+            "mountain": " Mountains can be seen in the background, suggesting a natural outdoor environment.",
+            "building": " A building is visible, indicating an urban or developed area.",
+            "park": " The scene takes place in a park, suggesting outdoor recreation.",
+            "street": " This appears to be on a street, in an urban or suburban setting.",
+            "room": " The scene is set indoors in a room.",
+            "kitchen": " This takes place in a kitchen, suggesting cooking or dining activities.",
+            "office": " An office setting is evident, indicating a work environment.",
+        }
+        
+        # Activity-based enhancements
+        activity_context = {
+            "sitting": " The subject is in a seated position, appearing relaxed or resting.",
+            "standing": " The subject is standing, suggesting an active or formal pose.",
+            "walking": " Movement is captured, with someone walking through the scene.",
+            "running": " Dynamic action is shown with someone running.",
+            "playing": " Play or recreational activity is taking place.",
+            "eating": " Dining or eating activity is captured in the moment.",
+            "working": " Work-related activity is taking place.",
+            "reading": " Someone is engaged in reading.",
+            "smiling": " A smile is visible, suggesting happiness or positive emotion.",
+        }
+        
+        # Weather/atmosphere enhancements
+        atmosphere_context = {
+            "sunny": " The lighting suggests sunny or bright conditions.",
+            "cloudy": " Overcast or cloudy conditions are apparent.",
+            "snow": " Snow is present, indicating winter conditions.",
+            "rain": " Rain or wet conditions are visible.",
+            "night": " This appears to be taken at night or in low-light conditions.",
+            "sunset": " The warm lighting suggests sunset or golden hour.",
+        }
+        
+        # Add relevant context
+        context_added = False
+        for keyword, context in {**subject_context, **object_context, **location_context, 
+                                  **activity_context, **atmosphere_context}.items():
+            if keyword in caption_lower and not context_added:
                 enhanced += context
+                context_added = True
+                break
+        
+        # Add general descriptive filler if no specific context was added
+        if not context_added:
+            enhanced += " The composition captures various elements that tell a visual story."
+        
+        # Add a concluding observation
+        conclusions = [
+            " The image has a clear focal point and balanced composition.",
+            " Various elements in the frame contribute to the overall narrative.",
+            " The scene appears naturally composed with attention to detail.",
+            " The photograph captures a moment in time with visual clarity.",
+        ]
+        
+        # Select conclusion based on caption length
+        conclusion_index = len(caption) % len(conclusions)
+        enhanced += conclusions[conclusion_index]
         
         return enhanced
     
     def _combine_descriptions(self, descriptions, base_caption):
-        """Intelligently combine multiple descriptions"""
-        # Start with base caption
-        combined = f"The image shows {base_caption}. "
+        """Intelligently combine multiple descriptions into a coherent narrative"""
+        # Start with enhanced base caption
+        combined = f"This image shows {base_caption}. "
         
-        # Add unique details from descriptions
-        unique_details = set()
+        # Collect unique details from all descriptions
+        all_details = []
+        seen_phrases = set()
+        
         for desc in descriptions:
+            # Clean and normalize the description
+            desc = desc.strip()
+            if not desc:
+                continue
+                
             # Split into sentences
-            sentences = desc.split('.')
+            sentences = desc.replace('!', '.').replace('?', '.').split('.')
+            
             for sentence in sentences:
                 sentence = sentence.strip()
-                if sentence and len(sentence) > 15:
-                    unique_details.add(sentence)
+                
+                # Skip if too short or already included
+                if len(sentence) < 15:
+                    continue
+                
+                # Normalize for comparison (lowercase, remove extra spaces)
+                normalized = ' '.join(sentence.lower().split())
+                
+                # Check if this is a new unique detail
+                is_unique = True
+                for seen in seen_phrases:
+                    # If 70% of words overlap, consider it duplicate
+                    seen_words = set(seen.split())
+                    sentence_words = set(normalized.split())
+                    if len(seen_words) > 0:
+                        overlap = len(seen_words & sentence_words) / len(seen_words)
+                        if overlap > 0.7:
+                            is_unique = False
+                            break
+                
+                if is_unique:
+                    all_details.append(sentence)
+                    seen_phrases.add(normalized)
         
-        # Combine unique details
-        if unique_details:
-            combined += " ".join(list(unique_details)[:3]) + "."
+        # Organize details by categories
+        subjects = []
+        actions = []
+        settings = []
+        colors_lighting = []
+        
+        for detail in all_details:
+            detail_lower = detail.lower()
+            
+            # Categorize the detail
+            if any(word in detail_lower for word in ['person', 'man', 'woman', 'child', 'people', 'someone', 'he', 'she']):
+                subjects.append(detail)
+            elif any(word in detail_lower for word in ['is', 'are', 'doing', 'holding', 'wearing', 'standing', 'sitting', 'walking']):
+                actions.append(detail)
+            elif any(word in detail_lower for word in ['background', 'setting', 'location', 'scene', 'place', 'area']):
+                settings.append(detail)
+            elif any(word in detail_lower for word in ['color', 'light', 'bright', 'dark', 'shadow', 'sun', 'sky']):
+                colors_lighting.append(detail)
+            else:
+                # Default to action if unclear
+                actions.append(detail)
+        
+        # Build narrative structure
+        narrative_parts = []
+        
+        # Add subject information
+        if subjects:
+            narrative_parts.append(subjects[0])
+        
+        # Add action information
+        if actions:
+            narrative_parts.append(actions[0])
+            if len(actions) > 1:
+                narrative_parts.append(actions[1])
+        
+        # Add setting/background
+        if settings:
+            narrative_parts.append(settings[0])
+        
+        # Add color/lighting if available
+        if colors_lighting:
+            narrative_parts.append(colors_lighting[0])
+        
+        # Combine narrative parts
+        if narrative_parts:
+            combined += " ".join(narrative_parts[:4])  # Limit to 4 most relevant details
+            if not combined.endswith('.'):
+                combined += '.'
+        else:
+            # Fallback: use first 3 unique details
+            if all_details:
+                combined += " ".join(all_details[:3])
+                if not combined.endswith('.'):
+                    combined += '.'
         
         return combined

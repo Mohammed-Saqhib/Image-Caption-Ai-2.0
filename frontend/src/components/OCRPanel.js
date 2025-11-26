@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaEye, FaDownload, FaCopy, FaCheck, FaImage } from 'react-icons/fa';
-import * as api from '../services/api';
 import './OCRPanel.css';
 
 const OCRPanel = ({ onProcess, result, loading, hasImage }) => {
@@ -14,15 +13,9 @@ const OCRPanel = ({ onProcess, result, loading, hasImage }) => {
   }, []);
 
   const loadLanguages = async () => {
-    try {
-      // API now returns only English language
-      const data = await api.getOCRLanguages();
-      setAvailableLanguages(data.languages || []);
-    } catch (error) {
-      console.error('Failed to load languages:', error);
-      // Fallback to English only
-      setAvailableLanguages([{ code: 'en', name: 'English' }]);
-    }
+    // 🔥 FORCE ENGLISH ONLY - Hardcoded to ensure no other languages appear
+    // This overrides any API response or cache issues
+    setAvailableLanguages([{ code: 'en', name: 'English' }]);
   };
 
   const toggleLanguage = (langCode) => {

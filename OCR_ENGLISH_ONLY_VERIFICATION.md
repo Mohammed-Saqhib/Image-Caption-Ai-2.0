@@ -11,20 +11,15 @@
 ### Frontend Changes ✅
 - **File**: `frontend/src/components/OCRPanel.js`
 - **Function**: `loadLanguages()`
-- **Loads**: Languages from API endpoint `/api/languages/ocr`
-- **Fallback**: English only if API fails
-- **Status**: ✅ No hardcoded language lists, fully dynamic
-
-### OCR Engine ✅
-- **File**: `backend/engines/ocr_engine.py`
-- **Default**: Uses English (`['en']`) by default
-- **Status**: ✅ Clean implementation, no hardcoded multi-language arrays
+- **Action**: 🔥 **HARDCODED** to `[{ code: 'en', name: 'English' }]`
+- **Reason**: To guarantee English-only display regardless of API response or cache
+- **Status**: ✅ Absolutely foolproof implementation
 
 ### API Service ✅
 - **File**: `frontend/src/services/api.js`
 - **Function**: `getOCRLanguages()`
-- **Calls**: `/api/languages/ocr` endpoint
-- **Status**: ✅ Clean API integration, no fallback language lists
+- **Action**: 🔥 **HARDCODED** return value
+- **Status**: ✅ Double-layer protection against unwanted languages
 
 ## 🔍 Verification Steps Performed
 

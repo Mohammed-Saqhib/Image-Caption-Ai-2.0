@@ -107,8 +107,9 @@ export const textToSpeech = async (text, language = 'en', rate = 200) => {
  * Get supported OCR languages
  */
 export const getOCRLanguages = async () => {
-  const response = await api.get('/api/languages/ocr');
-  return response.data;
+  // 🔥 FORCE ENGLISH ONLY - Hardcoded to ensure no other languages appear
+  // This overrides any API response or cache issues
+  return { languages: [{ code: 'en', name: 'English' }] };
 };
 
 /**

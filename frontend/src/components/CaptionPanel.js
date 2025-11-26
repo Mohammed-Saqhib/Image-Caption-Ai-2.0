@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaImage, FaDownload, FaCopy, FaCheck, FaCloud, FaLaptop, FaTag, FaMapMarkerAlt, FaEye, FaHeart } from 'react-icons/fa';
+import { FaImage, FaDownload, FaCopy, FaCheck, FaLaptop, FaTag, FaMapMarkerAlt, FaEye, FaHeart } from 'react-icons/fa';
 import './CaptionPanel.css';
 
 const CaptionPanel = ({ onProcess, result, loading, hasImage }) => {
-  const [mode, setMode] = useState('cloud');
+  const [mode, setMode] = useState('local');
   const [copied, setCopied] = useState(false);
 
   const handleGenerate = () => {
@@ -83,32 +83,19 @@ Insights:
               <h3>Processing Mode</h3>
               <div className="mode-options">
                 <motion.button
-                  className={`mode-btn ${mode === 'cloud' ? 'selected' : ''}`}
-                  onClick={() => setMode('cloud')}
+                  className={`mode-btn ${mode === 'local' ? 'selected' : ''}`}
+                  onClick={() => setMode('local')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <FaCloud />
+                  <FaLaptop />
                   <div>
-                    <strong>Cloud Mode</strong>
-                    <span>Faster, uses Hugging Face API</span>
+                    <strong>Local Mode</strong>
+                    <span>More privacy, runs on server</span>
                   </div>
-            </motion.button>
-
-            <motion.button
-              className={`mode-btn ${mode === 'local' ? 'selected' : ''}`}
-              onClick={() => setMode('local')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FaLaptop />
-              <div>
-                <strong>Local Mode</strong>
-                <span>More privacy, runs on server</span>
+                </motion.button>
               </div>
-            </motion.button>
-          </div>
-        </div>
+            </div>
 
         <motion.button
           className="action-btn primary"

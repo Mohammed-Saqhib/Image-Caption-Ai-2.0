@@ -40,28 +40,28 @@ export const sampleImages = [
   {
     id: 6,
     name: "Flood Alerts",
-    path: "/sample-images/Flood alerts save lives.png",
+    path: "/sample-images/sample_6_flood_alerts.png",
     description: "Alert message with text",
     category: "text"
   },
   {
     id: 7,
     name: "Solar Chargers",
-    path: "/sample-images/Solar chargers cut diesel use.png",
+    path: "/sample-images/sample_7_solar_chargers.png",
     description: "Information with text",
     category: "text"
   },
   {
     id: 8,
     name: "Traffic Maps",
-    path: "/sample-images/Traffic maps reduce delays daily.png",
+    path: "/sample-images/sample_8_traffic_maps.png",
     description: "Traffic information text",
     category: "text"
   },
   {
     id: 9,
     name: "UPI Loans",
-    path: "/sample-images/UPI loans get fast cash.png",
+    path: "/sample-images/sample_9_upi_loans.png",
     description: "Loan information with text",
     category: "text"
   }

@@ -10,34 +10,6 @@ export const sampleImages = [
     category: "text"
   },
   {
-    id: 2,
-    name: "Hindi Sample",
-    path: "/sample-images/sample_2_hindi.jpg",
-    description: "Hindi text for multilingual OCR",
-    category: "text"
-  },
-  {
-    id: 3,
-    name: "Mixed Languages",
-    path: "/sample-images/sample_3_mixed.jpg",
-    description: "Mixed language text sample",
-    category: "text"
-  },
-  {
-    id: 4,
-    name: "Document",
-    path: "/sample-images/sample_4_document.jpg",
-    description: "Document with clear text",
-    category: "text"
-  },
-  {
-    id: 5,
-    name: "Menu",
-    path: "/sample-images/sample_5_menu.jpg",
-    description: "Restaurant menu sample",
-    category: "text"
-  },
-  {
     id: 6,
     name: "Flood Alerts",
     path: "/sample-images/sample_6_flood_alerts.png",

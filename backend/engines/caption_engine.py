@@ -78,12 +78,19 @@ class CaptionEngine:
         """Generate NEXT-LEVEL caption with rich insights and zero repetition"""
         self.load_model()
         
-        # Generate base caption with MAXIMUM quality
+        # Optimize: Resize image for faster processing
+        # BLIP works best with 384x384, but we keep it slightly larger for details
+        if max(image.size) > 512:
+            ratio = 512 / max(image.size)
+            new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+            image = image.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Generate base caption with MAXIMUM quality but optimized speed
         inputs = self.processor(image, return_tensors="pt").to(self.device)
         outputs = self.model.generate(
             **inputs,
             max_length=60,
-            num_beams=10,
+            num_beams=5,  # Reduced from 10 to 5 for 2x speedup with similar quality
             length_penalty=1.2,
             early_stopping=True,
             no_repeat_ngram_size=3
@@ -573,10 +580,10 @@ class CaptionEngine:
             inputs = self.processor(image, text=prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 **inputs,
-                max_length=50,
-                num_beams=5,
+                max_length=30,  # Reduced length
+                num_beams=2,    # Reduced beams for speed
                 early_stopping=True,
-                no_repeat_ngram_size=3
+                no_repeat_ngram_size=2
             )
             result = self.processor.decode(outputs[0], skip_special_tokens=True)
             return self._ultra_clean(result, prompt)
@@ -590,10 +597,10 @@ class CaptionEngine:
             inputs = self.processor(image, text=prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 **inputs,
-                max_length=50,
-                num_beams=5,
+                max_length=30,
+                num_beams=2,
                 early_stopping=True,
-                no_repeat_ngram_size=3
+                no_repeat_ngram_size=2
             )
             result = self.processor.decode(outputs[0], skip_special_tokens=True)
             return self._ultra_clean(result, prompt)
@@ -607,10 +614,10 @@ class CaptionEngine:
             inputs = self.processor(image, text=prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 **inputs,
-                max_length=50,
-                num_beams=5,
+                max_length=30,
+                num_beams=2,
                 early_stopping=True,
-                no_repeat_ngram_size=3
+                no_repeat_ngram_size=2
             )
             result = self.processor.decode(outputs[0], skip_special_tokens=True)
             return self._ultra_clean(result, prompt)
@@ -624,10 +631,10 @@ class CaptionEngine:
             inputs = self.processor(image, text=prompt, return_tensors="pt").to(self.device)
             outputs = self.model.generate(
                 **inputs,
-                max_length=50,
-                num_beams=5,
+                max_length=30,
+                num_beams=2,
                 early_stopping=True,
-                no_repeat_ngram_size=3
+                no_repeat_ngram_size=2
             )
             result = self.processor.decode(outputs[0], skip_special_tokens=True)
             return self._ultra_clean(result, prompt)

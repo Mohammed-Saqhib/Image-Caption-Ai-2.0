@@ -36,6 +36,14 @@ class OCREngine:
         try:
             # Load image
             image = Image.open(image_path)
+            
+            # Optimize: Resize if too large (speeds up OCR significantly)
+            max_dimension = 1280
+            if max(image.size) > max_dimension:
+                ratio = max_dimension / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+                
             image_np = np.array(image)
             
             # Get reader for languages
